@@ -1,107 +1,175 @@
-#include<cstdio>
-#include<iostream>
-#include<fstream>
-#include<cstring>
 #include<stdio.h>
+#include<stack>
+#include<iostream>
+#include<utility>
+#include<string>
+
+#define PLUS 0
+#define MUL 1
+#define I 2
+#define LEFTPAREN 3
+#define RIGHTPAREN 4
+#define WELL 5
+#define N 6
+#define END -1
+#define STATUTE_TRUE 1
+#define STATUTE_FALSE 0
 using namespace std;
-char ch=' ';
-char token[20];
-char *keyin[6]={"BEGIN","END","FOR","IF","THEN","ELSE"};
-char *keyout[6]={"Begin","End","For","If","Then","Else"};
-char sepin[6]={':','+','*',',','(',')'};
-char *sepout[6]={"Colon","Plus","Star","Comma","LParenthesis","RParenthesis"};
-//判断关键字(不是为0)
-int iskey(char *token){
-	for(int i=0;i<=5;i++)
-	    if(strcmp(keyin[i],token)==0)
-	        return ++i;
-	return 0;
+int priority_table[6][6]={
+    {2,1,1,1,2,2},
+    {2,2,1,1,2,2},
+    {2,2,-1,-1,2,2},
+    {1,1,1,1,0,-1},
+    {2,2,-1,-1,2,2},
+    {1,1,1,1,-1,-1}
+};
+int statute(stack<char>& st){
+    if(st.top() == 'i'){
+        st.pop();
+        st.push('N');
+        return STATUTE_TRUE;
+    }
+    else if(st.top() == 'N'){
+        st.pop();
+        if(st.top()=='+'||st.top()=='*'){
+            st.pop();
+            if(st.top()=='N'){
+                return STATUTE_TRUE;
+            }
+            else{
+                return STATUTE_FALSE;
+            }
+        }
+        else{
+            return STATUTE_FALSE;
+        }
+    }
+    else if(st.top() == ')'){
+        st.pop();
+        if(st.top()=='N'){
+            st.pop();
+            if(st.top() == '('){
+                st.pop();
+                st.push('N');
+                return STATUTE_TRUE;
+            }
+            else{
+                return STATUTE_FALSE;
+            }
+        }
+        else{
+            return STATUTE_FALSE;
+        }
+    }
+    else{
+        return STATUTE_FALSE;
+    }
+}
+
+int getIndex(char c){
+    switch (c){
+    case '+':{
+        return PLUS;
+        break;
+    }
+    case '*':{
+        return MUL;
+        break;
+    }
+    case 'i':{
+        return I;
+        break;
+    }
+    case '(':{
+        return LEFTPAREN;
+        break;
+    }
+    case ')':{
+        return RIGHTPAREN;
+        break;
+    }
+    case '#':{
+        return WELL;
+        break;
+    }
+    default:
+        return -1;
+        break;
+    }
+}
+char get_vt(stack<char> st){
+    char c;
+    if(st.top()=='N'){
+        st.pop();
+        c = st.top();
+        st.push('N');
+    }
+    else{
+        c = st.top();
+    }
+    return c;
 } 
-//判断字母 
-bool isletter(char letter){
-	if((letter>='a'&&letter<='z')||(letter>='A'&&letter<='Z'))
-	    return true;
-	else 
-	    return false;
+int main(int argc,char* argv[]){
+    FILE* fp = NULL;
+    std::stack<char> st;
+    st.push('#');
+    char s_temp[1005]={'\0'};
+    fp = fopen(argv[1],"r");
+    fscanf(fp,"%s",s_temp);
+    std::string s = s_temp;
+    s += '#';
+    int index_y;
+    int index_x;
+    char c;
+    int i = 0;
+    while(i < s.length()){
+        index_y = getIndex(s[i]);
+        if(index_y != -1 ){
+            if(i!=s.length()-1 && s[i]=='#'){
+                printf("E\n");
+                return 0;
+            }
+            c = get_vt(st);
+            index_x = getIndex(c);
+            switch (priority_table[index_x][index_y]){
+            case 2:{
+                int status = statute(st);
+                if( status == STATUTE_TRUE){
+                    printf("R\n");
+                }
+                else if(status == STATUTE_FALSE){
+                    printf("RE\n");
+                    return 0;
+                }
+                break;
+            }
+            case 1:{
+                printf("I%c\n",s[i]);
+                st.push(s[i]);
+                i++;
+                break;
+            }
+            case 0:{
+                printf("I%c\n",s[i]);
+                st.push(s[i]);
+                i++;
+                break;
+            }
+            default:{
+                if(c == '#' && s[i] == '#'){
+                    return 0;
+                }
+                printf("E\n");
+                return 0;
+                break;
+            }
+            }
+        }
+        else{
+            printf("E\n");
+            return 0;
+        }
+    }
+    fclose(fp);
+    return 0;
 }
-//判断数字 
-bool isdigit(char digit){
-	if(digit>='0'&&digit<='9')
-	    return true;
-	else
-	    return false;
-}
-//判断分界符
-int isseprator(char token){
-	for(int i=0;i<=5;i++)
-	    if(token==sepin[i])
-	        return ++i;
-	return 0;
-} 
-int stoi(char *token,int l){
-	int t=0;
-	for(int i=0;i<=l;i++){
-		t=t*10+token[i]-'0';
-	}
-	return t;
-}
-//词法分析函数 
-void analyze(FILE *file){
-    while((ch=fgetc(file))!=EOF){
-    	if(ch==' '||ch=='\t'||ch=='\n'){}
-    	else if(isletter(ch)){
-    		char token[20]={'\0'};
-    		int i=0;
-    		while(isletter(ch)||isdigit(ch)){
-    			token[i]=ch;
-    			i++;
-    			ch=fgetc(file);
-			}
-			int k=iskey(token);
-			if(k>0) cout<<keyout[k-1]<<endl;
-			else{
-				cout<<"Ident("<<token<<")"<<endl;
-			}
-			memset(token,'\0',i+1);
-			fseek(file,-1L,SEEK_CUR);
-			if(ch==EOF) return;
-		}
-		else if(isdigit(ch)){
-			int i=0;
-			while(isdigit(ch)){
-				token[i]=ch;
-				i++;
-				ch=fgetc(file);
-			}
-			if(i==1) cout<<"Int("<<token<<")"<<endl;
-			else cout<<"Int("<<stoi(token,i-1)<<")"<<endl;
-			memset(token,'\0',i+1);
-			fseek(file,-1L,SEEK_CUR);
-			if(ch==EOF) return;
-		}
-		else if(isseprator(ch)){
-			int s=isseprator(ch);
-			char t=fgetc(file);
-			if(s==1&&t=='='){
-				cout<<"Assign"<<endl;
-				continue;
-			} 
-			else{
-				cout<<sepout[s-1]<<endl;
-			}
-			fseek(file,-1L,SEEK_CUR);
-			if(ch==EOF) return;
-		}
-		else{
-			cout<<"Unknown"<<endl;
-			return;
-		} 
-	}
-}
-int main(int argc,char *argv[]){
-	FILE *file=fopen(argv[1],"r");
-	//FILE *file=fopen("test.txt","r"); 
-	analyze(file);
-	fclose(file);
-	return 0;
-} 
