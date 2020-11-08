@@ -1,21 +1,19 @@
+#include <iostream>
+#include <fstream>
+#include <vector>
+#include <stack>
 #include<stdio.h>
-#include<stack>
-#include<iostream>
-#include<utility>
-#include<string>
-
-#define PLUS 0
-#define MUL 1
-#define I 2
-#define LEFTPAREN 3
-#define RIGHTPAREN 4
-#define WELL 5
-#define N 6
-#define END -1
-#define STATUTE_TRUE 1
-#define STATUTE_FALSE 0
+#include<string> 
+ 
 using namespace std;
-int priority_table[6][6]={
+
+string str; //存储输入文法
+stack <char> st;//栈 
+string str_b; // 剩余输入串
+//符号索引
+char key[6] = {'+','*','i','(',')','#'};
+// 算符优先关系表
+int table[6][6] = {
     {2,1,1,1,2,2},
     {2,2,1,1,2,2},
     {2,2,-1,-1,2,2},
@@ -23,82 +21,79 @@ int priority_table[6][6]={
     {2,2,-1,-1,2,2},
     {1,1,1,1,-1,-1}
 };
-int statute(stack<char>& st){
-    if(st.top() == 'i'){
-        st.pop();
-        st.push('N');
-        return STATUTE_TRUE;
-    }
-    else if(st.top() == 'N'){
-        st.pop();
-        if(st.top()=='+'||st.top()=='*'){
-            st.pop();
-            if(st.top()=='N'){
-                return STATUTE_TRUE;
-            }
-            else{
-                return STATUTE_FALSE;
-            }
-        }
-        else{
-            return STATUTE_FALSE;
-        }
-    }
-    else if(st.top() == ')'){
-        st.pop();
-        if(st.top()=='N'){
-            st.pop();
-            if(st.top() == '('){
-                st.pop();
-                st.push('N');
-                return STATUTE_TRUE;
-            }
-            else{
-                return STATUTE_FALSE;
-            }
-        }
-        else{
-            return STATUTE_FALSE;
-        }
-    }
-    else{
-        return STATUTE_FALSE;
-    }
+void set_stack(){
+	st.push('#');
 }
 
-int getIndex(char c){
-    switch (c){
-    case '+':{
-        return PLUS;
-        break;
-    }
-    case '*':{
-        return MUL;
-        break;
-    }
-    case 'i':{
-        return I;
-        break;
-    }
-    case '(':{
-        return LEFTPAREN;
-        break;
-    }
-    case ')':{
-        return RIGHTPAREN;
-        break;
-    }
-    case '#':{
-        return WELL;
-        break;
-    }
-    default:
-        return -1;
-        break;
-    }
+//寻找字符a在算符优先关系表中的位置
+int find(char a){
+	for (int i = 0; i <= 5; ++i){
+		if (key[i] == a){
+			return i;
+		}
+	}
+	return -1;
 }
-char get_vt(stack<char> st){
-    char c;
+
+// 删除字符串的第一个元素
+void init_string(string &a) {
+	for (int i = 1; i <= a.length(); ++i){
+		a[i - 1] = a[i];
+	}
+}
+
+//获取终结符a，b的优先关系
+int get_relationship(char a, char b) {
+	int x = find(a);
+	int y = find(b);
+	if(x<0||y<0) return -2;
+	return table[x][y];
+}
+
+bool is_reduce(){
+	if(st.top() == 'i'){
+		st.pop();
+		st.push('N');
+		return true;
+	}
+	else if(st.top() == 'N'){
+		st.pop();
+		if(st.top() == '+'||st.top() == '*'){ 
+		    st.pop();
+		    if(st.top() == 'N'){
+		    	return true;
+			}
+			else{
+				return false;
+			}
+		}
+		else{
+			return false;
+		}
+    }
+	else if(st.top() == ')'){
+		st.pop();
+		if(st.top() == 'N'){
+			st.pop();
+			if(st.top() == '('){
+				st.pop();
+				st.push('N');
+				return true;
+			}
+			else{
+			 	return false;
+			}
+		}
+		else{
+			return false;
+		}
+	}
+	else{
+		return false;
+	}
+}
+char get_t(){
+	char c;
     if(st.top()=='N'){
         st.pop();
         c = st.top();
@@ -108,68 +103,54 @@ char get_vt(stack<char> st){
         c = st.top();
     }
     return c;
-} 
-int main(int argc,char* argv[]){
-    FILE* fp = NULL;
-    std::stack<char> st;
-    st.push('#');
-    char s_temp[1005]={'\0'};
+}
+// 生成算符优先文法的分析过程
+void analyze(){
+    int i = 0;
+	while(i < str.length()){
+		char c = get_t();
+		int ret = get_relationship(c,str[i]);
+		if(ret == -2){
+			printf("E\n");
+            return;
+		}
+		else if(ret == 2){
+			int is_re = is_reduce();
+			if(is_re == 1){
+				printf("R\n");
+			}
+			else{
+				printf("RE\n");
+				return;
+			}
+		}
+		else if(ret == 1|| ret == 0){
+			printf("I%c\n",str[i]);
+            st.push(str[i]);
+            i++;
+		}
+		else{
+			if(str[i]=='#'&&c=='#'){
+				return;
+			}
+			else{
+				printf("E\n");
+                return;
+			}
+		}
+	}
+	
+}
+
+int main(int argc, char* argv[]){
+	FILE* fp = NULL;
+	set_stack();
+	char s_temp[1010]={'\0'};
     fp = fopen(argv[1],"r");
     fscanf(fp,"%s",s_temp);
     std::string s = s_temp;
-    s += '#';
-    int index_y;
-    int index_x;
-    char c;
-    int i = 0;
-    while(i < s.length()){
-        index_y = getIndex(s[i]);
-        if(index_y != -1 ){
-            if(i!=s.length()-1 && s[i]=='#'){
-                printf("E\n");
-                return 0;
-            }
-            c = get_vt(st);
-            index_x = getIndex(c);
-            switch (priority_table[index_x][index_y]){
-            case 2:{
-                int status = statute(st);
-                if( status == STATUTE_TRUE){
-                    printf("R\n");
-                }
-                else if(status == STATUTE_FALSE){
-                    printf("RE\n");
-                    return 0;
-                }
-                break;
-            }
-            case 1:{
-                printf("I%c\n",s[i]);
-                st.push(s[i]);
-                i++;
-                break;
-            }
-            case 0:{
-                printf("I%c\n",s[i]);
-                st.push(s[i]);
-                i++;
-                break;
-            }
-            default:{
-                if(c == '#' && s[i] == '#'){
-                    return 0;
-                }
-                printf("E\n");
-                return 0;
-                break;
-            }
-            }
-        }
-        else{
-            printf("E\n");
-            return 0;
-        }
-    }
-    fclose(fp);
-    return 0;
+	str += '#'; 
+	analyze();
+	fclose(fp);
+	return 0;
 }
