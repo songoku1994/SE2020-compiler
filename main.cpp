@@ -1,6 +1,5 @@
 #include <iostream>
 #include <fstream>
-#include <vector>
 #include <stack>
 #include<stdio.h>
 #include<string> 
@@ -9,7 +8,6 @@ using namespace std;
 
 string str; //存储输入文法
 stack <char> st;//栈 
-string str_b; // 剩余输入串
 //符号索引
 char key[6] = {'+','*','i','(',')','#'};
 // 算符优先关系表
@@ -33,13 +31,6 @@ int find(char a){
 		}
 	}
 	return -1;
-}
-
-// 删除字符串的第一个元素
-void init_string(string &a) {
-	for (int i = 1; i <= a.length(); ++i){
-		a[i - 1] = a[i];
-	}
 }
 
 //获取终结符a，b的优先关系
@@ -115,8 +106,7 @@ void analyze(){
             return;
 		}
 		else if(ret == 2){
-			int is_re = is_reduce();
-			if(is_re == 1){
+			if(is_reduce()){
 				printf("R\n");
 			}
 			else{
@@ -148,7 +138,7 @@ int main(int argc, char* argv[]){
 	char s_temp[1010]={'\0'};
     fp = fopen(argv[1],"r");
     fscanf(fp,"%s",s_temp);
-    std::string s = s_temp;
+    str = s_temp;
 	str += '#'; 
 	analyze();
 	fclose(fp);
